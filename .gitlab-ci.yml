@@ -1,0 +1,48 @@
+variables:
+  IMAGE_NAME: image_name
+  CONTAINER_NAME: container_name
+  ROOT_FOLDER_NAME: app
+  PORT: 4001
+
+stages:
+  # - test
+  - build
+  - deploy
+
+# run_tests:
+#   stage: test
+#   image: node:lts-slim
+#   before_script:
+#     - npm install
+#   script:
+#     - npm run test
+
+build_image:
+  stage: build
+  image: docker:24.0.7
+  services:
+    - docker:24.0.7-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - echo "Logged in to Docker successfully"
+    - docker info
+  script:
+    - docker build -t <repo_link>/$IMAGE_NAME:latest .
+    - echo "Build image successfully"
+    - docker push <repo_link>/$IMAGE_NAME:latest
+    - echo "Pushed image successfully"
+
+deploy:
+  stage: deploy
+  before_script:
+    - chmod 400 $SSH_KEY
+  script:
+    - ssh -o StrictHostKeyChecking=no -i $SSH_KEY -T $HOST "
+      echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin &&
+      docker stop '$CONTAINER_NAME' || true &&
+      docker rm '$CONTAINER_NAME' || true &&
+      docker images | grep '$IMAGE_NAME' | awk '{print $3}' | xargs docker rmi -f || true &&
+      docker pull <repo_link>/$IMAGE_NAME:latest &&
+      docker run -d -p $PORT:$PORT --name $CONTAINER_NAME --mount type=bind,source=/data/logs,target=/var/www/$ROOT_FOLDER_NAME/logs --mount type=bind,source=/data/uploads,target=/var/www/$ROOT_FOLDER_NAME/public/images <repo_link>/$IMAGE_NAME"

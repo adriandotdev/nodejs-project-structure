@@ -1,0 +1,276 @@
+openapi: 3.0.3
+info:
+  title: "API - Login Service"
+  version: 1.0.1
+  description: "**This contains all of the APIs for Login service.**"
+  contact:
+    email: email@API.com
+components:
+  securitySchemes:
+    auth: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basic:
+      type: http
+      scheme: basic
+  schemas:
+    LOGIN_REQUEST_BODY:
+      description: JSON format of Login API request body
+      type: object
+      properties:
+        username:
+          type: string
+          example: "username"
+        password:
+          type: string
+          example: "password"
+    LOGIN_RESPONSE_BODY:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+              example: <access_token>
+            access_expires_in:
+              type: integer
+              example: <access_expires_in>
+            refresh_token:
+              type: string
+              example: <refresh_token>
+        message:
+          type: string
+          example: "SUCCESS"
+    OTP_REQUEST_BODY:
+      type: object
+      properties:
+        email:
+          type: string
+          example: "youremail@gmail.com"
+    OTP_RESPONSE_BODY:
+      type: object
+      properties:
+        status:
+          type: integer
+          format: int64
+          example: 200
+        data:
+          type: object
+          properties:
+            USER_ID:
+              type: integer
+              format: int64
+              example: 4
+            STATUS:
+              type: string
+              example: DECREASE_RESEND_ATTEMPTS
+            otp:
+              type: string
+              example: "431445"
+        message:
+          type: string
+          example: Success
+    VERIFY_OTP_REQUEST_BODY:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 3
+        otp:
+          type: string
+          example: "441341"
+    VERIFY_OTP_RESPONSE_BODY:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        data:
+          type: string
+          example: "SUCCESS"
+        message:
+          type: string
+          example: "Success"
+    CHANGE_OLD_PASSWORD_REQUEST_BODY:
+      type: object
+      properties:
+        old_password:
+          type: string
+          example: old_password
+        new_password:
+          type: string
+          example: new_password
+        confirm_password:
+          type: string
+          example: confirm_password
+tags:
+  - name: Login
+    description: ParkNcharge - Login Services
+servers:
+  - url: http://localhost:4001
+  - url: https://services-parkncharge.sysnetph.com
+paths:
+  title: "Login"
+  /login/api/auth/v1/login: # login
+    post:
+      tags:
+        - Login
+      summary: Login with username, and password.
+      description: Authenticate user with username and password.
+      security:
+        - basic: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LOGIN_REQUEST_BODY"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LOGIN_RESPONSE_BODY"
+        "401":
+          description: Unauthorized
+        "422":
+          description: Unprocessable Entity
+        "500":
+          description: Internal Server Error
+  /login/api/auth/v1/logout: # logout
+    post:
+      tags:
+        - Login
+      summary: "Logout API"
+      security:
+        - auth: []
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+  /login/api/auth/v1/refresh: # refresh
+    get:
+      tags:
+        - Login
+      summary: "Refresh Token API"
+      security:
+        - auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LOGIN_RESPONSE_BODY"
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+  /login/api/auth/v1/send-otp: # send-otp
+    post:
+      tags:
+        - Login
+      summary: "Request for OTP for Forgot Password"
+      security:
+        - basic: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OTP_REQUEST_BODY"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OTP_RESPONSE_BODY"
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+  /login/api/auth/v1/verify-otp:
+    post:
+      tags:
+        - Login
+      summary: Verify the user's OTP.
+      security:
+        - basic: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VERIFY_OTP_REQUEST_BODY"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VERIFY_OTP_RESPONSE_BODY"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+  /login/api/auth/v1/change-password/{user_id}:
+    post:
+      tags:
+        - Login
+      summary: Change Password
+      security:
+        - basic: []
+      parameters:
+        - in: path
+          name: user_id
+          schema:
+            type: integer
+          required: true
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  example: "new_password"
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+  /login/api/auth/v1/change-old-password:
+    post:
+      tags:
+        - Login
+      summary: Change Old Password
+      security:
+        - auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CHANGE_OLD_PASSWORD_REQUEST_BODY"
+      responses:
+        "200":
+          description: Success
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
